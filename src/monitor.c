@@ -17,7 +17,7 @@ void	*monitor_routine(void *arg)
 		{
 			pthread_mutex_lock(&prog->meal_lock);
 			/* check death */
-        if ((get_time_ms() - ph[i].last_meal) >= prog->time_to_die)
+        if ((get_time_ms() - ph[i].last_meal) >= prog->time_to_die + 1) // ADDED 1 TO PREVENT STARVATION 
         {
             pthread_mutex_lock(&prog->dead_lock);
             if (!prog->dead)
