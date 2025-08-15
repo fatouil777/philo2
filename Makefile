@@ -1,21 +1,20 @@
 NAME = philo
-CC = gcc
-CFLAGS = -Wall -Wextra -Werror -pthread -I include
-SRCS = src/main.c src/init.c src/utils.c src/routine.c src/actions.c \
-	   src/monitor.c src/cleanup.c
-OBJS = $(SRCS:.c=.o)
+SRC = main.c utils.c init.c threads.c monitor.c routine_actions.c
+
+FLAGS = -Wall -Wextra -Werror -O3 -pthread
+
 
 all: $(NAME)
 
-$(NAME): $(SRCS)
-	$(CC) $(CFLAGS) $(SRCS) -o $(NAME)
+$(NAME): $(SRC) 
+	@cc $(FLAGS) -o $(NAME) $(SRC) $(SANITIZER)
 
 clean:
-	@rm -f $(OBJS)
+	@rm -f $(NAME)
 
 fclean: clean
 	@rm -f $(NAME)
 
 re: fclean all
 
-.PHONY: all clean fclean re
+.PHONY: all clean fclean re debug
