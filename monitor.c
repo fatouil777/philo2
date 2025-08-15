@@ -1,94 +1,88 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   monitor.c                                          :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: abnemili <abnemili@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/06 10:18:49 by abnemili          #+#    #+#             */
-/*   Updated: 2025/05/10 16:40:56 by abnemili         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+
 
 #include "philosophers.h"
 
-void	print_message(char *str, t_philo *philo, int id)
+void	broadcast_message(char *message, t_philosopher *philo, int id)
 {
-	size_t	time;
+	size_t	elapsed_time;
 
-	pthread_mutex_lock(philo->write_lock);
-	time = get_current_time() - philo->start_time;
-	if (!dead_loop(philo))
-		printf("%zu %d %s\n", time, id, str);
-	pthread_mutex_unlock(philo->write_lock);
+	pthread_mutex_lock(philo->output_mutex);
+	elapsed_time = get_timestamp_milliseconds() - philo->simulation_start_time;
+	if (!check_simulation_status(philo))
+		printf("%zu %d %s\n", elapsed_time, id, message);
+	pthread_mutex_unlock(philo->output_mutex);
 }
 
-int	philosopher_dead(t_philo *philo, size_t time_to_die)
+int	is_philosopher_starved(t_philosopher *philo, size_t death_limit)
 {
-	pthread_mutex_lock(philo->meal_lock);
-	if (get_current_time() - philo->last_meal >= time_to_die + 1
-		&& philo->eating == 0)
-		return (pthread_mutex_unlock(philo->meal_lock), 1);
-	pthread_mutex_unlock(philo->meal_lock);
+	pthread_mutex_lock(philo->meal_tracking_mutex);
+	if (get_timestamp_milliseconds() - philo->timestamp_last_meal >= death_limit + 1
+		&& philo->currently_eating == 0)
+		return (pthread_mutex_unlock(philo->meal_tracking_mutex), 1);
+	pthread_mutex_unlock(philo->meal_tracking_mutex);
 	return (0);
 }
 
-int	check_if_dead(t_philo *philos)
+int	check_for_philosopher_death(t_philosopher *philosophers)
 {
-	int	i;
+	int	philosopher_index;
 
-	i = 0;
-	while (i < philos[0].num_of_philos)
+	philosopher_index = 0;
+	while (philosopher_index < philosophers[0].total_philosophers)
 	{
-		if (philosopher_dead(&philos[i], philos[i].time_to_die))
+		if (is_philosopher_starved(&philosophers[philosopher_index], 
+			philosophers[philosopher_index].death_timer))
 		{
-			print_message("died", &philos[i], philos[i].id);
-			pthread_mutex_lock(philos[0].dead_lock);
-			*philos->dead = 1;
-			pthread_mutex_unlock(philos[0].dead_lock);
+			broadcast_message(DEATH_MSG, &philosophers[philosopher_index], 
+				philosophers[philosopher_index].philosopher_id);
+			pthread_mutex_lock(philosophers[0].death_check_mutex);
+			*philosophers->simulation_ended = 1;
+			pthread_mutex_unlock(philosophers[0].death_check_mutex);
 			return (1);
 		}
-		i++;
+		philosopher_index++;
 	}
 	return (0);
 }
 
-int	check_if_all_ate(t_philo *philos)
+int	verify_all_philosophers_fed(t_philosopher *philosophers)
 {
-	int	i;
-	int	finished_eating;
+	int	philosopher_index;
+	int	philosophers_who_finished_eating;
 
-	i = 0;
-	finished_eating = 0;
-	if (philos[0].num_times_to_eat == -1)
+	philosopher_index = 0;
+	philosophers_who_finished_eating = 0;
+	if (philosophers[0].required_meal_count == -1)
 		return (0);
-	while (i < philos[0].num_of_philos)
+	while (philosopher_index < philosophers[0].total_philosophers)
 	{
-		pthread_mutex_lock(philos[i].meal_lock);
-		if (philos[i].meals_eaten >= philos[i].num_times_to_eat)
-			finished_eating++;
-		pthread_mutex_unlock(philos[i].meal_lock);
-		i++;
+		pthread_mutex_lock(philosophers[philosopher_index].meal_tracking_mutex);
+		if (philosophers[philosopher_index].total_meals_consumed >= 
+			philosophers[philosopher_index].required_meal_count)
+			philosophers_who_finished_eating++;
+		pthread_mutex_unlock(philosophers[philosopher_index].meal_tracking_mutex);
+		philosopher_index++;
 	}
-	if (finished_eating == philos[0].num_of_philos)
+	if (philosophers_who_finished_eating == philosophers[0].total_philosophers)
 	{
-		pthread_mutex_lock(philos[0].dead_lock);
-		*philos->dead = 1;
-		pthread_mutex_unlock(philos[0].dead_lock);
+		pthread_mutex_lock(philosophers[0].death_check_mutex);
+		*philosophers->simulation_ended = 1;
+		pthread_mutex_unlock(philosophers[0].death_check_mutex);
 		return (1);
 	}
 	return (0);
 }
 
-void	*monitor(void *pointer)
+void	*monitor_philosophers(void *simulation_data)
 {
-	t_philo	*philos;
+	t_philosopher	*philosophers_array;
 
-	philos = (t_philo *)pointer;
+	philosophers_array = (t_philosopher *)simulation_data;
 	while (1)
 	{
-		if (check_if_dead(philos) == 1 || check_if_all_ate(philos) == 1)
+		if (check_for_philosopher_death(philosophers_array) == 1 
+			|| verify_all_philosophers_fed(philosophers_array) == 1)
 			break ;
 	}
-	return (pointer);
+	return (simulation_data);
 }

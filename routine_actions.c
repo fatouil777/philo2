@@ -1,49 +1,39 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   routine_actions.c                                  :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: abnemili <abnemili@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/06 10:20:11 by abnemili          #+#    #+#             */
-/*   Updated: 2025/05/10 16:04:13 by abnemili         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+
 
 #include "philosophers.h"
 
-void	think(t_philo *philo)
+void	perform_thinking_action(t_philosopher *philo)
 {
-	print_message(": is thinking", philo, philo->id);
+	broadcast_message(THINKING_MSG, philo, philo->philosopher_id);
 }
 
-void	dream(t_philo *philo)
+void	perform_sleeping_action(t_philosopher *philo)
 {
-	print_message(": is sleeping", philo, philo->id);
-	ft_usleep(philo->time_to_sleep);
+	broadcast_message(SLEEPING_MSG, philo, philo->philosopher_id);
+	precise_sleep(philo->sleeping_duration);
 }
 
-void	eat(t_philo *philo)
+void	perform_eating_action(t_philosopher *philo)
 {
-	pthread_mutex_lock(philo->r_fork);
-	print_message(": has taken a fork", philo, philo->id);
-	if (philo->num_of_philos == 1)
+	pthread_mutex_lock(philo->right_chopstick);
+	broadcast_message(FORK_MSG, philo, philo->philosopher_id);
+	if (philo->total_philosophers == 1)
 	{
-		ft_usleep(philo->time_to_die);
-		pthread_mutex_unlock(philo->r_fork);
+		precise_sleep(philo->death_timer);
+		pthread_mutex_unlock(philo->right_chopstick);
 		return ;
 	}
-	pthread_mutex_lock(philo->l_fork);
-	print_message(": has taken a fork", philo, philo->id);
-	philo->eating = 1;
-	print_message(": is eating", philo, philo->id);
-	pthread_mutex_lock(philo->meal_lock);
-	philo->last_meal = get_current_time();
-	philo->meals_eaten++;
-	pthread_mutex_unlock(philo->meal_lock);
-	ft_usleep(philo->time_to_eat);
-	philo->eating = 0;
-	pthread_mutex_unlock(philo->l_fork);
-	pthread_mutex_unlock(philo->r_fork);
-	ft_usleep(2);
+	pthread_mutex_lock(philo->left_chopstick);
+	broadcast_message(FORK_MSG, philo, philo->philosopher_id);
+	philo->currently_eating = 1;
+	broadcast_message(EATING_MSG, philo, philo->philosopher_id);
+	pthread_mutex_lock(philo->meal_tracking_mutex);
+	philo->timestamp_last_meal = get_timestamp_milliseconds();
+	philo->total_meals_consumed++;
+	pthread_mutex_unlock(philo->meal_tracking_mutex);
+	precise_sleep(philo->eating_duration);
+	philo->currently_eating = 0;
+	pthread_mutex_unlock(philo->left_chopstick);
+	pthread_mutex_unlock(philo->right_chopstick);
+	precise_sleep(2);
 }

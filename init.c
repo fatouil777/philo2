@@ -1,73 +1,65 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   init.c                                             :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: abnemili <abnemili@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/06 10:16:28 by abnemili          #+#    #+#             */
-/*   Updated: 2025/05/06 16:13:32 by abnemili         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+
 
 #include "philosophers.h"
 
-void	init_input(t_philo *philo, char **argv)
+void	parse_input_parameters(t_philosopher *philo, char **arguments)
 {
-	philo->time_to_die = ft_atoi(argv[2]);
-	philo->time_to_eat = ft_atoi(argv[3]);
-	philo->time_to_sleep = ft_atoi(argv[4]);
-	philo->num_of_philos = ft_atoi(argv[1]);
-	if (argv[5])
-		philo->num_times_to_eat = ft_atoi(argv[5]);
+	philo->death_timer = string_to_integer(arguments[2]);
+	philo->eating_duration = string_to_integer(arguments[3]);
+	philo->sleeping_duration = string_to_integer(arguments[4]);
+	philo->total_philosophers = string_to_integer(arguments[1]);
+	if (arguments[5])
+		philo->required_meal_count = string_to_integer(arguments[5]);
 	else
-		philo->num_times_to_eat = -1;
+		philo->required_meal_count = -1;
 }
 
-void	init_philos(t_philo *philos, t_program *program, pthread_mutex_t *forks,
-		char **argv)
+void	configure_philosophers(t_philosopher *philosophers, t_simulation *sim,
+		pthread_mutex_t *chopsticks, char **arguments)
 {
-	int	i;
+	int	current_philosopher;
 
-	i = 0;
-	while (i < ft_atoi(argv[1]))
+	current_philosopher = 0;
+	while (current_philosopher < string_to_integer(arguments[1]))
 	{
-		philos[i].id = i + 1;
-		philos[i].eating = 0;
-		philos[i].meals_eaten = 0;
-		init_input(&philos[i], argv);
-		philos[i].start_time = get_current_time();
-		philos[i].last_meal = get_current_time();
-		philos[i].write_lock = &program->write_lock;
-		philos[i].dead_lock = &program->dead_lock;
-		philos[i].meal_lock = &program->meal_lock;
-		philos[i].dead = &program->dead_flag;
-		philos[i].l_fork = &forks[i];
-		if (i == 0)
-			philos[i].r_fork = &forks[philos[i].num_of_philos - 1];
+		philosophers[current_philosopher].philosopher_id = current_philosopher + 1;
+		philosophers[current_philosopher].currently_eating = 0;
+		philosophers[current_philosopher].total_meals_consumed = 0;
+		parse_input_parameters(&philosophers[current_philosopher], arguments);
+		philosophers[current_philosopher].simulation_start_time = get_timestamp_milliseconds();
+		philosophers[current_philosopher].timestamp_last_meal = get_timestamp_milliseconds();
+		philosophers[current_philosopher].output_mutex = &sim->output_mutex;
+		philosophers[current_philosopher].death_check_mutex = &sim->death_check_mutex;
+		philosophers[current_philosopher].meal_tracking_mutex = &sim->meal_tracking_mutex;
+		philosophers[current_philosopher].simulation_ended = &sim->end_simulation;
+		philosophers[current_philosopher].left_chopstick = &chopsticks[current_philosopher];
+		if (current_philosopher == 0)
+			philosophers[current_philosopher].right_chopstick = 
+				&chopsticks[philosophers[current_philosopher].total_philosophers - 1];
 		else
-			philos[i].r_fork = &forks[i - 1];
-		i++;
+			philosophers[current_philosopher].right_chopstick = 
+				&chopsticks[current_philosopher - 1];
+		current_philosopher++;
 	}
 }
 
-void	init_forks(pthread_mutex_t *forks, int philo_num)
+void	initialize_chopsticks(pthread_mutex_t *chopsticks, int philosopher_count)
 {
-	int	i;
+	int	chopstick_index;
 
-	i = 0;
-	while (i < philo_num)
+	chopstick_index = 0;
+	while (chopstick_index < philosopher_count)
 	{
-		pthread_mutex_init(&forks[i], NULL);
-		i++;
+		pthread_mutex_init(&chopsticks[chopstick_index], NULL);
+		chopstick_index++;
 	}
 }
 
-void	init_program(t_program *program, t_philo *philos)
+void	setup_simulation(t_simulation *sim, t_philosopher *philosophers)
 {
-	program->dead_flag = 0;
-	program->philos = philos;
-	pthread_mutex_init(&program->write_lock, NULL);
-	pthread_mutex_init(&program->dead_lock, NULL);
-	pthread_mutex_init(&program->meal_lock, NULL);
+	sim->end_simulation = 0;
+	sim->philosophers_array = philosophers;
+	pthread_mutex_init(&sim->output_mutex, NULL);
+	pthread_mutex_init(&sim->death_check_mutex, NULL);
+	pthread_mutex_init(&sim->meal_tracking_mutex, NULL);
 }

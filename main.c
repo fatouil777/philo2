@@ -1,79 +1,74 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   main.c                                             :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: abnemili <abnemili@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/06 10:13:54 by abnemili          #+#    #+#             */
-/*   Updated: 2025/05/06 20:15:58 by abnemili         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+
 
 #include "philosophers.h"
 
-int	check_arg_content(char *arg)
+int	validate_argument_content(char *argument)
 {
-	int	i;
+	int	index;
 
-	i = 0;
-	while (arg[i] != '\0')
+	index = 0;
+	while (argument[index] != '\0')
 	{
-		if (arg[i] < '0' || arg[i] > '9')
+		if (argument[index] < '0' || argument[index] > '9')
 			return (1);
-		i++;
+		index++;
 	}
 	return (0);
 }
 
-int	check_valid_args(char **argv)
+int	validate_all_arguments(char **arguments)
 {
-	if (ft_atoi(argv[1]) > PHILO_MAX || ft_atoi(argv[1]) <= 0
-		|| check_arg_content(argv[1]) == 1)
+	if (string_to_integer(arguments[1]) > MAX_PHILOSOPHERS 
+		|| string_to_integer(arguments[1]) <= 0
+		|| validate_argument_content(arguments[1]) == 1)
 	{
-		ft_putstr_fd("Invalid philosophers number\n", 2);
+		write_to_file_descriptor("Error: Invalid number of philosophers\n", 2);
 		return (1);
 	}
-	if (ft_atoi(argv[2]) <= 0 || check_arg_content(argv[2]) == 1)
+	if (string_to_integer(arguments[2]) <= 0 
+		|| validate_argument_content(arguments[2]) == 1)
 	{
-		ft_putstr_fd("Invalid time to die\n", 2);
+		write_to_file_descriptor("Error: Invalid time to die\n", 2);
 		return (1);
 	}
-	if (ft_atoi(argv[3]) <= 0 || check_arg_content(argv[3]) == 1)
+	if (string_to_integer(arguments[3]) <= 0 
+		|| validate_argument_content(arguments[3]) == 1)
 	{
-		ft_putstr_fd("Invalid time to eat\n", 2);
+		write_to_file_descriptor("Error: Invalid time to eat\n", 2);
 		return (1);
 	}
-	if (ft_atoi(argv[4]) <= 0 || check_arg_content(argv[4]) == 1)
+	if (string_to_integer(arguments[4]) <= 0 
+		|| validate_argument_content(arguments[4]) == 1)
 	{
-		ft_putstr_fd("Invalid time to sleep\n", 2);
+		write_to_file_descriptor("Error: Invalid time to sleep\n", 2);
 		return (1);
 	}
-	if (argv[5] && (ft_atoi(argv[5]) < 0 || check_arg_content(argv[5]) == 1))
+	if (arguments[5] && (string_to_integer(arguments[5]) < 0 
+		|| validate_argument_content(arguments[5]) == 1))
 	{
-		ft_putstr_fd("Invalid number of times each philosopher must eat\n", 2);
+		write_to_file_descriptor("Error: Invalid meal count requirement\n", 2);
 		return (1);
 	}
 	return (0);
 }
 
-int	main(int argc, char **argv)
+int	main(int argument_count, char **arguments)
 {
-	t_program		program;
-	t_philo			philos[PHILO_MAX];
-	pthread_mutex_t	forks[PHILO_MAX];
+	t_simulation		dining_simulation;
+	t_philosopher		philosophers[MAX_PHILOSOPHERS];
+	pthread_mutex_t		chopsticks[MAX_PHILOSOPHERS];
 
-	if (argc != 5 && argc != 6)
+	if (argument_count != 5 && argument_count != 6)
 	{
-		ft_putstr_fd("Wrong argument number\n", 2);
+		write_to_file_descriptor("Usage: ./philo [num_philosophers] [time_to_die] [time_to_eat] [time_to_sleep] [optional: meals_required]\n", 2);
 		return (1);
 	}
-	if (check_valid_args(argv) == 1)
+	if (validate_all_arguments(arguments) == 1)
 		return (1);
-	init_program(&program, philos);
-	init_forks(forks, ft_atoi(argv[1]));
-	init_philos(philos, &program, forks, argv);
-	thread_create(&program, forks);
-	destroy_all(NULL, &program, forks);
+	setup_simulation(&dining_simulation, philosophers);
+	initialize_chopsticks(chopsticks, string_to_integer(arguments[1]));
+	configure_philosophers(philosophers, &dining_simulation, chopsticks, arguments);
+	launch_simulation(&dining_simulation, chopsticks);
+	cleanup_resources(NULL, &dining_simulation, chopsticks);
 	return (0);
 }

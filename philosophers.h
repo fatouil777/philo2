@@ -1,90 +1,91 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   philosophers.h                                     :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: abnemili <abnemili@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/06 10:14:41 by abnemili          #+#    #+#             */
-/*   Updated: 2025/05/06 20:10:48 by abnemili         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+
 
 #ifndef PHILOSOPHERS_H
 # define PHILOSOPHERS_H
+
 # include <pthread.h>
 # include <stdio.h>
 # include <stdlib.h>
 # include <sys/time.h>
 # include <unistd.h>
 
-# define PHILO_MAX 300
+# define MAX_PHILOSOPHERS 300
+# define THINKING_MSG "is thinking"
+# define SLEEPING_MSG "is sleeping"
+# define EATING_MSG "is eating"
+# define FORK_MSG "has taken a fork"
+# define DEATH_MSG "died"
 
-typedef struct s_philo
+typedef struct s_philosopher
 {
-	pthread_t		thread;
-	int				id;
-	int				eating;
-	int				meals_eaten;
-	size_t			last_meal;
-	size_t			time_to_die;
-	size_t			time_to_eat;
-	size_t			time_to_sleep;
-	size_t			start_time;
-	int				num_of_philos;
-	int				num_times_to_eat;
-	int				*dead;
-	pthread_mutex_t	*r_fork;
-	pthread_mutex_t	*l_fork;
-	pthread_mutex_t	*write_lock;
-	pthread_mutex_t	*dead_lock;
-	pthread_mutex_t	*meal_lock;
-}					t_philo;
+	pthread_t		life_thread;
+	int				philosopher_id;
+	int				currently_eating;
+	int				total_meals_consumed;
+	size_t			timestamp_last_meal;
+	size_t			death_timer;
+	size_t			eating_duration;
+	size_t			sleeping_duration;
+	size_t			simulation_start_time;
+	int				total_philosophers;
+	int				required_meal_count;
+	int				*simulation_ended;
+	pthread_mutex_t	*right_chopstick;
+	pthread_mutex_t	*left_chopstick;
+	pthread_mutex_t	*output_mutex;
+	pthread_mutex_t	*death_check_mutex;
+	pthread_mutex_t	*meal_tracking_mutex;
+}					t_philosopher;
 
-typedef struct s_program
+typedef struct s_simulation
 {
-	int				dead_flag;
-	pthread_mutex_t	dead_lock;
-	pthread_mutex_t	meal_lock;
-	pthread_mutex_t	write_lock;
-	t_philo			*philos;
-}					t_program;
+	int				end_simulation;
+	pthread_mutex_t	death_check_mutex;
+	pthread_mutex_t	meal_tracking_mutex;
+	pthread_mutex_t	output_mutex;
+	t_philosopher	*philosophers_array;
+}					t_simulation;
 
-// Main functions
-int					check_arg_content(char *arg);
-int					check_valid_args(char **argv);
-void				destroy_all(char *str, t_program *program,
-						pthread_mutex_t *forks);
+// === CORE FUNCTIONS ===
+int					validate_argument_content(char *argument);
+int					validate_all_arguments(char **arguments);
+void				cleanup_resources(char *error_msg, t_simulation *sim,
+						pthread_mutex_t *chopsticks);
 
-// Initialization
-void				init_program(t_program *program, t_philo *philos);
-void				init_forks(pthread_mutex_t *forks, int philo_num);
-void				init_philos(t_philo *philos, t_program *program,
-						pthread_mutex_t *forks, char **argv);
-void				init_input(t_philo *philo, char **argv);
+// === INITIALIZATION FUNCTIONS ===
+void				setup_simulation(t_simulation *sim, t_philosopher *philos);
+void				initialize_chopsticks(pthread_mutex_t *chopsticks, 
+						int philosopher_count);
+void				configure_philosophers(t_philosopher *philos, 
+						t_simulation *sim, pthread_mutex_t *chopsticks, 
+						char **arguments);
+void				parse_input_parameters(t_philosopher *philo, char **arguments);
 
-// Threads
-int					thread_create(t_program *program, pthread_mutex_t *forks);
-void				*monitor(void *pointer);
-void				*philo_routine(void *pointer);
+// === THREAD MANAGEMENT ===
+int					launch_simulation(t_simulation *sim, 
+						pthread_mutex_t *chopsticks);
+void				*monitor_philosophers(void *simulation_data);
+void				*philosopher_lifecycle(void *philosopher_data);
 
-// Actions
-void				eat(t_philo *philo);
-void				dream(t_philo *philo);
-void				think(t_philo *philo);
+// === PHILOSOPHER ACTIONS ===
+void				perform_eating_action(t_philosopher *philo);
+void				perform_sleeping_action(t_philosopher *philo);
+void				perform_thinking_action(t_philosopher *philo);
 
-// Monitor utils
-int					dead_loop(t_philo *philo);
-int					check_if_all_ate(t_philo *philos);
-int					check_if_dead(t_philo *philos);
-int					philosopher_dead(t_philo *philo, size_t time_to_die);
+// === MONITORING UTILITIES ===
+int					check_simulation_status(t_philosopher *philo);
+int					verify_all_philosophers_fed(t_philosopher *philos);
+int					check_for_philosopher_death(t_philosopher *philos);
+int					is_philosopher_starved(t_philosopher *philo, 
+						size_t death_limit);
 
-// Utils
-int					ft_atoi(char *str);
-int					ft_usleep(size_t microseconds);
-int					ft_strlen(char *str);
-void				ft_putstr_fd(char *str, int fd);
-void				print_message(char *str, t_philo *philo, int id);
-size_t				get_current_time(void);
+// === UTILITY FUNCTIONS ===
+int					string_to_integer(char *str);
+int					precise_sleep(size_t milliseconds);
+int					calculate_string_length(char *str);
+void				write_to_file_descriptor(char *str, int fd);
+void				broadcast_message(char *message, t_philosopher *philo, 
+						int id);
+size_t				get_timestamp_milliseconds(void);
 
 #endif

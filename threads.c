@@ -1,65 +1,62 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   threads.c                                          :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: abnemili <abnemili@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/06 10:18:09 by abnemili          #+#    #+#             */
-/*   Updated: 2025/05/10 14:02:17 by abnemili         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+
 
 #include "philosophers.h"
 
-int	dead_loop(t_philo *philo)
+int	check_simulation_status(t_philosopher *philo)
 {
-	pthread_mutex_lock(philo->dead_lock);
-	if (*philo->dead == 1)
-		return (pthread_mutex_unlock(philo->dead_lock), 1);
-	pthread_mutex_unlock(philo->dead_lock);
+	pthread_mutex_lock(philo->death_check_mutex);
+	if (*philo->simulation_ended == 1)
+		return (pthread_mutex_unlock(philo->death_check_mutex), 1);
+	pthread_mutex_unlock(philo->death_check_mutex);
 	return (0);
 }
 
-void	*philo_routine(void *pointer)
+void	*philosopher_lifecycle(void *philosopher_data)
 {
-	t_philo	*philo;
+	t_philosopher	*current_philosopher;
 
-	philo = (t_philo *)pointer;
-	if (philo->id % 2 == 0)
-		ft_usleep(1);
-	while (!dead_loop(philo))
+	current_philosopher = (t_philosopher *)philosopher_data;
+	if (current_philosopher->philosopher_id % 2 == 0)
+		precise_sleep(1);
+	while (!check_simulation_status(current_philosopher))
 	{
-		eat(philo);
-		dream(philo);
-		think(philo);
+		perform_eating_action(current_philosopher);
+		perform_sleeping_action(current_philosopher);
+		perform_thinking_action(current_philosopher);
 	}
-	return (pointer);
+	return (philosopher_data);
 }
 
-int	thread_create(t_program *program, pthread_mutex_t *forks)
+int	launch_simulation(t_simulation *sim, pthread_mutex_t *chopsticks)
 {
-	pthread_t	monitor_thread;
-	int			i;
+	pthread_t	monitoring_thread;
+	int			philosopher_index;
 
-	if (pthread_create(&monitor_thread, NULL, &monitor, program->philos) != 0)
-		destroy_all("Thread creation error", program, forks);
-	i = 0;
-	while (i < program->philos[0].num_of_philos)
+	if (pthread_create(&monitoring_thread, NULL, &monitor_philosophers, 
+		sim->philosophers_array) != 0)
+		cleanup_resources("Error: Failed to create monitoring thread", 
+			sim, chopsticks);
+	philosopher_index = 0;
+	while (philosopher_index < sim->philosophers_array[0].total_philosophers)
 	{
-		if (pthread_create(&program->philos[i].thread, NULL, &philo_routine,
-				&program->philos[i]) != 0)
-			destroy_all("Thread creation error", program, forks);
-		i++;
+		if (pthread_create(&sim->philosophers_array[philosopher_index].life_thread, 
+			NULL, &philosopher_lifecycle, 
+			&sim->philosophers_array[philosopher_index]) != 0)
+			cleanup_resources("Error: Failed to create philosopher thread", 
+				sim, chopsticks);
+		philosopher_index++;
 	}
-	i = 0;
-	if (pthread_join(monitor_thread, NULL) != 0)
-		destroy_all("Thread join error", program, forks);
-	while (i < program->philos[0].num_of_philos)
+	philosopher_index = 0;
+	if (pthread_join(monitoring_thread, NULL) != 0)
+		cleanup_resources("Error: Failed to join monitoring thread", 
+			sim, chopsticks);
+	while (philosopher_index < sim->philosophers_array[0].total_philosophers)
 	{
-		if (pthread_join(program->philos[i].thread, NULL) != 0)
-			destroy_all("Thread join error", program, forks);
-		i++;
+		if (pthread_join(sim->philosophers_array[philosopher_index].life_thread, 
+			NULL) != 0)
+			cleanup_resources("Error: Failed to join philosopher thread", 
+				sim, chopsticks);
+		philosopher_index++;
 	}
 	return (0);
 }

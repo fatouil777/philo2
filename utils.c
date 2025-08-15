@@ -1,96 +1,88 @@
-/* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   utils.c                                            :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: abnemili <abnemili@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/05/06 10:17:32 by abnemili          #+#    #+#             */
-/*   Updated: 2025/05/06 20:43:48 by abnemili         ###   ########.fr       */
-/*                                                                            */
-/* ************************************************************************** */
+
 
 #include "philosophers.h"
 
-void	ft_putstr_fd(char *str, int fd)
+void	write_to_file_descriptor(char *str, int fd)
 {
-	if (write(fd, str, ft_strlen(str)) == -1)
+	if (write(fd, str, calculate_string_length(str)) == -1)
 	{
-		/* Error handling could be added here if needed */
+		/* Error handling could be implemented here if needed */
 	}
 }
 
-int	ft_strlen(char *str)
+int	calculate_string_length(char *str)
 {
-	int	i;
+	int	length;
 
 	if (str == NULL)
 		return (0);
-	i = 0;
-	while (str[i] != '\0')
-		i++;
-	return (i);
+	length = 0;
+	while (str[length] != '\0')
+		length++;
+	return (length);
 }
 
-int	ft_atoi(char *str)
+int	string_to_integer(char *str)
 {
-	unsigned long long	nb;
-	int					sign;
-	int					i;
+	unsigned long long	number;
+	int					sign_multiplier;
+	int					char_index;
 
-	nb = 0;
-	sign = 1;
-	i = 0;
-	while (str[i] == ' ' || str[i] == '\t' || str[i] == '\n' || str[i] == '\v'
-		|| str[i] == '\f' || str[i] == '\r')
-		i++;
-	if (str[i] == '-')
-		sign = -1;
-	if (str[i] == '-' || str[i] == '+')
-		i++;
-	while (str[i] >= '0' && str[i] <= '9')
+	number = 0;
+	sign_multiplier = 1;
+	char_index = 0;
+	while (str[char_index] == ' ' || str[char_index] == '\t' 
+		|| str[char_index] == '\n' || str[char_index] == '\v'
+		|| str[char_index] == '\f' || str[char_index] == '\r')
+		char_index++;
+	if (str[char_index] == '-')
+		sign_multiplier = -1;
+	if (str[char_index] == '-' || str[char_index] == '+')
+		char_index++;
+	while (str[char_index] >= '0' && str[char_index] <= '9')
 	{
-		nb = nb * 10 + (str[i] - '0');
-		i++;
+		number = number * 10 + (str[char_index] - '0');
+		char_index++;
 	}
-	return (sign * nb);
+	return (sign_multiplier * number);
 }
 
-void	destroy_all(char *str, t_program *program, pthread_mutex_t *forks)
+void	cleanup_resources(char *error_msg, t_simulation *sim, 
+		pthread_mutex_t *chopsticks)
 {
-	int	i;
+	int	resource_index;
 
-	i = 0;
-	if (str)
+	resource_index = 0;
+	if (error_msg)
 	{
-		ft_putstr_fd(str, 2);
-		ft_putstr_fd("\n", 2);
+		write_to_file_descriptor(error_msg, 2);
+		write_to_file_descriptor("\n", 2);
 	}
-	pthread_mutex_destroy(&program->write_lock);
-	pthread_mutex_destroy(&program->meal_lock);
-	pthread_mutex_destroy(&program->dead_lock);
-	while (i < program->philos[0].num_of_philos)
+	pthread_mutex_destroy(&sim->output_mutex);
+	pthread_mutex_destroy(&sim->meal_tracking_mutex);
+	pthread_mutex_destroy(&sim->death_check_mutex);
+	while (resource_index < sim->philosophers_array[0].total_philosophers)
 	{
-		pthread_mutex_destroy(&forks[i]);
-		i++;
+		pthread_mutex_destroy(&chopsticks[resource_index]);
+		resource_index++;
 	}
 }
 
-int	ft_usleep(size_t milliseconds)
+int	precise_sleep(size_t milliseconds)
 {
-	size_t	start;
+	size_t	sleep_start_time;
 
-	start = get_current_time();
-	while ((get_current_time() - start) < milliseconds)
+	sleep_start_time = get_timestamp_milliseconds();
+	while ((get_timestamp_milliseconds() - sleep_start_time) < milliseconds)
 		usleep(500);
 	return (0);
 }
 
-size_t	get_current_time(void)
+size_t	get_timestamp_milliseconds(void)
 {
-	struct timeval	time;
+	struct timeval	current_time;
 
-	if (gettimeofday(&time, NULL) == -1)
-		ft_putstr_fd("gettimeofday() error\n", 2);
-	return (time.tv_sec * 1000 + time.tv_usec / 1000);
+	if (gettimeofday(&current_time, NULL) == -1)
+		write_to_file_descriptor("Error: gettimeofday() failed\n", 2);
+	return (current_time.tv_sec * 1000 + current_time.tv_usec / 1000);
 }
