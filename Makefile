@@ -1,7 +1,7 @@
 NAME = philo
 SRC = main.c utils.c init.c threads.c monitor.c routine_actions.c
 
-FLAGS = -Wall -Wextra -Werror -O3 -pthread
+FLAGS = -Wall -Wextra -Werror -fsanitize=address -O3 -pthread
 
 
 all: $(NAME)

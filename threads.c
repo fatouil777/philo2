@@ -1,4 +1,14 @@
-
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   threads.c                                          :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: fatouil <fatouil@student.42.fr>            +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/08/16 21:37:26 by fatouil           #+#    #+#             */
+/*   Updated: 2025/08/16 22:57:53 by fatouil          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
 #include "philosophers.h"
 
@@ -17,7 +27,7 @@ void	*philosopher_lifecycle(void *philosopher_data)
 
 	current_philosopher = (t_philosopher *)philosopher_data;
 	if (current_philosopher->philosopher_id % 2 == 0)
-		precise_sleep(1);
+		precise_sleep(1, current_philosopher);
 	while (!check_simulation_status(current_philosopher))
 	{
 		perform_eating_action(current_philosopher);

@@ -1,4 +1,14 @@
-
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   utils.c                                            :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: fatouil <fatouil@student.42.fr>            +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/08/16 21:37:32 by fatouil           #+#    #+#             */
+/*   Updated: 2025/08/16 22:55:24 by fatouil          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
 #include "philosophers.h"
 
@@ -68,12 +78,12 @@ void	cleanup_resources(char *error_msg, t_simulation *sim,
 	}
 }
 
-int	precise_sleep(size_t milliseconds)
+int	precise_sleep(size_t milliseconds, t_philosopher *philo)
 {
 	size_t	sleep_start_time;
 
 	sleep_start_time = get_timestamp_milliseconds();
-	while ((get_timestamp_milliseconds() - sleep_start_time) < milliseconds)
+	while (!check_simulation_status(philo) && (get_timestamp_milliseconds() - sleep_start_time) < milliseconds)
 		usleep(500);
 	return (0);
 }

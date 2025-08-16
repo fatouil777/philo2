@@ -1,4 +1,14 @@
-
+/* ************************************************************************** */
+/*                                                                            */
+/*                                                        :::      ::::::::   */
+/*   philosophers.h                                     :+:      :+:    :+:   */
+/*                                                    +:+ +:+         +:+     */
+/*   By: fatouil <fatouil@student.42.fr>            +#+  +:+       +#+        */
+/*                                                +#+#+#+#+#+   +#+           */
+/*   Created: 2025/08/16 21:37:16 by fatouil           #+#    #+#             */
+/*   Updated: 2025/08/16 22:56:18 by fatouil          ###   ########.fr       */
+/*                                                                            */
+/* ************************************************************************** */
 
 #ifndef PHILOSOPHERS_H
 # define PHILOSOPHERS_H
@@ -81,7 +91,7 @@ int					is_philosopher_starved(t_philosopher *philo,
 
 // === UTILITY FUNCTIONS ===
 int					string_to_integer(char *str);
-int					precise_sleep(size_t milliseconds);
+int					precise_sleep(size_t milliseconds, t_philosopher *philo);
 int					calculate_string_length(char *str);
 void				write_to_file_descriptor(char *str, int fd);
 void				broadcast_message(char *message, t_philosopher *philo, 
